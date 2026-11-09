@@ -3,6 +3,12 @@ from typing import Any, Dict, List, Optional
 from prettytable import PrettyTable
 
 from primitive_db.constants import VALID_TYPES
+from primitive_db.decorators import (
+    confirm_action,
+    create_cacher,
+    handle_db_errors,
+    log_time,
+)
 from primitive_db.utils import (
     ensure_data_dir,
     load_metadata,
@@ -11,6 +17,7 @@ from primitive_db.utils import (
     save_table_data,
 )
 
+get_cache = create_cacher()
 
 def create_table(table_name: str, columns: List[str]) -> None:
     """Создает новую таблицу с автоматическим добавлением ID:int"""
@@ -44,6 +51,8 @@ def create_table(table_name: str, columns: List[str]) -> None:
     )
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(table_name: str) -> None:
     """Удаляет таблицу из метаданных"""
     metadata = load_metadata()
@@ -68,6 +77,8 @@ def list_tables() -> None:
         print(f"- {table}")
 
 
+@handle_db_errors
+@log_time
 def insert(table_name: str, values: List[Any]) -> None:
     """Добавляет новую запись в таблицу с автоматической генерацией ID."""
     metadata = load_metadata()
@@ -104,26 +115,34 @@ def insert(table_name: str, values: List[Any]) -> None:
     print(f"Запись с ID={new_id} успешно добавлена в таблицу '{table_name}'.")
 
 
+@handle_db_errors
+@log_time
 def select(table_name: str, where_clause: Optional[Dict[str, Any]] = None) -> None:
     """Выводит записи из таблицы, фильтруя по условию."""
-    metadata = load_metadata()
-    if table_name not in metadata:
-        raise KeyError(f"Таблица '{table_name}' не существует.")
+    cache_key = f"{table_name}_{where_clause}"
+    
+    def fetch_data():
+        metadata = load_metadata()
+        if table_name not in metadata:
+            raise KeyError(f"Таблица '{table_name}' не существует.")
+        
+        data = load_table_data(table_name)
+        columns = metadata[table_name]["columns"]
+        
+        if where_clause:
+            filtered = []
+            for row in data:
+                match = True
+                for col, val in where_clause.items():
+                    if col not in row or row[col] != val:
+                        match = False
+                        break
+                if match:
+                    filtered.append(row)
+            return filtered, columns
+        return data, columns
 
-    data = load_table_data(table_name)
-    columns = metadata[table_name]["columns"]
-
-    if where_clause:
-        filtered = []
-        for row in data:
-            match = True
-            for col, val in where_clause.items():
-                if col not in row or row[col] != val:
-                    match = False
-                    break
-            if match:
-                filtered.append(row)
-        data = filtered
+    data, columns = get_cache(cache_key, fetch_data)
 
     table = PrettyTable()
     col_names = [c.split(":")[0] for c in columns]
@@ -163,6 +182,8 @@ def update(
     print(f"В таблице '{table_name}' успешно обновлено записей: {updated_count}.")
 
 
+@handle_db_errors
+@confirm_action("удаление записи")
 def delete(table_name: str, where_clause: Dict[str, Any]) -> None:
     """Удаляет записи из таблицы по условию."""
     metadata = load_metadata()
