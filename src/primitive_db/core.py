@@ -1,9 +1,11 @@
+import os
 from typing import Any, Dict, List, Optional
 
 from prettytable import PrettyTable
 
-from primitive_db.constants import VALID_TYPES
+from primitive_db.constants import DATA_DIR, VALID_TYPES
 from primitive_db.decorators import (
+    clear_cache,
     confirm_action,
     create_cacher,
     handle_db_errors,
@@ -45,6 +47,7 @@ def create_table(table_name: str, columns: List[str]) -> None:
     metadata[table_name] = {"columns": final_columns}
     save_metadata(metadata)
     ensure_data_dir()
+    clear_cache()
     print(
         f"Таблица '{table_name}' успешно создана со столбцами: "
         f"{', '.join(final_columns)}"
@@ -62,6 +65,12 @@ def drop_table(table_name: str) -> None:
 
     del metadata[table_name]
     save_metadata(metadata)
+
+    data_file = os.path.join(DATA_DIR, f"{table_name}.json")
+    if os.path.exists(data_file):
+        os.remove(data_file)
+
+    clear_cache()
     print(f"Таблица '{table_name}' успешно удалена")
 
 
@@ -112,6 +121,7 @@ def insert(table_name: str, values: List[Any]) -> None:
 
     data.append(new_row)
     save_table_data(table_name, data)
+    clear_cache()
     print(f"Запись с ID={new_id} успешно добавлена в таблицу '{table_name}'.")
 
 
@@ -179,6 +189,7 @@ def update(
         return
 
     save_table_data(table_name, data)
+    clear_cache()
     print(f"В таблице '{table_name}' успешно обновлено записей: {updated_count}.")
 
 
@@ -204,6 +215,7 @@ def delete(table_name: str, where_clause: Dict[str, Any]) -> None:
         return
 
     save_table_data(table_name, data)
+    clear_cache()
     print(f"Из таблицы '{table_name}' успешно удалено записей: {deleted_count}.")
 
 def info(table_name: str) -> None:

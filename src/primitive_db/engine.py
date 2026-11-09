@@ -129,7 +129,12 @@ def _handle_insert(args: list, user_input: str) -> None:
         raise ValueError("Не найдено ключевое слово 'values'")
 
     values_str = user_input[values_start + len("values"):].strip()
-    values = parse_values(values_str)
+    raw_values = parse_values(values_str)
+
+    from primitive_db.parser import _convert_value
+
+    values = [_convert_value(v) for v in raw_values]
+
     insert(table_name, values)
 
 

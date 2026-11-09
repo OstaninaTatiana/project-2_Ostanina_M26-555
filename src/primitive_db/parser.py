@@ -78,6 +78,4 @@ def _convert_value(value: str) -> Any:
     try:
         return int(value)
     except ValueError:
-        pass
-
-    raise ValueError(f"Некорректное значение: {value}")
+        return value

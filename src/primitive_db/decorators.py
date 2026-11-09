@@ -52,15 +52,21 @@ def log_time(func: Callable) -> Callable:
     return wrapper
 
 
+_cache: Dict[str, Any] = {}
+
+
 def create_cacher() -> Callable:
     """Фабрика замыкания для кэширования результатов."""
-    cache: Dict[str, Any] = {}
-
     def cache_result(key: str, value_func: Callable) -> Any:
-        if key in cache:
-            return cache[key]
+        if key in _cache:
+            return _cache[key]
         result = value_func()
-        cache[key] = result
+        _cache[key] = result
         return result
 
     return cache_result
+
+
+def clear_cache() -> None:
+    """Очищает кэш после операций, изменяющих данные."""
+    _cache.clear()

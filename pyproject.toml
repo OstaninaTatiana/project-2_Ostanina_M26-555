@@ -1,10 +1,10 @@
 [project]
 name = "primitive-db"
 version = "0.1.0"
-description = "Add your description here"
+description = "primitive database"
 readme = "README.md"
 authors = [
-    { name = "Tatiana", email = "none@none.none" }
+    { name = "Ostanina Tatiana", email = "Tatiana.0stanina@yandex.ru" }
 ]
 requires-python = ">=3.12"
 dependencies = [
